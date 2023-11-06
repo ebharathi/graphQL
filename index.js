@@ -1,6 +1,7 @@
 const express=require('express')
 const cors=require('cors');
 const bcrypt=require('bcryptjs')
+const jwt=require('jsonwebtoken')
 //import for graphQL
 const { graphqlHTTP } = require("express-graphql")
 const { buildSchema } = require("graphql")
@@ -36,24 +37,55 @@ var schema = buildSchema(`
      name:String
      email:String
      password:String
+     token:String
   }
   type Query {
-    user(_id:ID):User
+    user(token:String):User
+    login(name:String,email:String):User
   }
   type Mutation{
     createUser(name:String,email:String,password:String):User
   }
 `)
 var resolver = {
+  //creaat a user  
   createUser:async({name,email,password})=>{
-     const newUser=new User();
-     newUser.name=name;
-     newUser.email=email;
-     const hashedPassword=await bcrypt.hash(password,10);
-     newUser.password=hashedPassword;
-     const savedUser=await newUser.save();
-     return savedUser;
-  }
+    try {
+            const newUser=new User();
+            newUser.name=name;
+            newUser.email=email;
+            const hashedPassword=await bcrypt.hash(password,10);
+            newUser.password=hashedPassword;
+            const savedUser=await newUser.save();
+            return savedUser;
+    } catch (error) {
+          throw new Error("Failed to create a user")
+    }
+  },
+  //find a user
+    user:async({token})=>{
+        try {
+            const decoded=jwt.verify(token,'qazwsxplmokn');
+            console.log("User verification: ",decoded);
+            const user=await User.findById(decoded.userId)
+            return user;
+        } catch (error) {
+             throw new User("User details failed to fetch")
+        }
+    },
+    //login a user
+    login:async({name,email})=>{
+        try {
+            const user=await User.find({name:name,email:email})
+            console.log("user--->",user)
+            const token=jwt.sign({userId:user[0]._id},'qazwsxplmokn',{expiresIn:'5h'})
+            user[0].token=token;
+            return user[0];
+        } catch (error) {
+             throw new Error("Login failed")
+        }
+    }  
+
 }
 //connecting graphQL
 app.use('/graphql',graphqlHTTP({
