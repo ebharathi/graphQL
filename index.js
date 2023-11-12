@@ -15,21 +15,7 @@ app.use(express.json())
 app.use(cors())
 //mongoDB
 connect()
-//data
-const usersData=[
-    {
-        id:1,
-        name:"john",
-        age:21,
-        email:"john@gmail.com"
-    },
-    {
-        id:2,
-        name:"Mikel",
-        age:18,
-        email:"mikel@gmail.com"
-    }
-]
+
 //graphQL
 var schema = buildSchema(`
   type User{
@@ -41,24 +27,27 @@ var schema = buildSchema(`
   }
   type Query {
     user(token:String):User
-    login(name:String,email:String):User
+    login(email:String,password:String):User
   }
   type Mutation{
     createUser(name:String,email:String,password:String):User
   }
 `)
 var resolver = {
-  //creaat a user  
+  //create a user  
   createUser:async({name,email,password})=>{
     try {
+            console.log("-->",name,"-->",email,"-->",password)
             const newUser=new User();
             newUser.name=name;
             newUser.email=email;
             const hashedPassword=await bcrypt.hash(password,10);
             newUser.password=hashedPassword;
             const savedUser=await newUser.save();
+            console.log("[+]User saved")
             return savedUser;
     } catch (error) {
+          console.log("[-]error creating user--->",error?.message)
           throw new Error("Failed to create a user")
     }
   },
@@ -73,18 +62,35 @@ var resolver = {
              throw new User("User details failed to fetch")
         }
     },
-    //login a user
-    login:async({name,email})=>{
+    //login a userc
+    login:async({email,password})=>{
         try {
-            const user=await User.find({name:name,email:email})
+            console.log("-->",password,'-->',email)
+            const user=await User.find({email:email})
             console.log("user--->",user)
-            const token=jwt.sign({userId:user[0]._id},'qazwsxplmokn',{expiresIn:'5h'})
-            user[0].token=token;
-            return user[0];
+            if(user.length==0)
+             {
+              console.log("no user found[-]")
+              throw new Error("No user found!!")
+             }
+            if(user.length!=0)
+            {
+              const isPasswordSame=await bcrypt.compare(password,user?.password)
+              if(isPasswordSame)
+              {
+                console.log("user found--->",user)
+                const token=jwt.sign({userId:user[0]._id},'qazwsxplmokn',{expiresIn:'5h'})
+                user[0].token=token;
+                return user[0];
+              }
+              else
+                throw new Error("Invalid user!!")
+            }
         } catch (error) {
-             throw new Error("Login failed")
+             throw new Error(error.message)
         }
-    }  
+    } 
+
 
 }
 //connecting graphQL
