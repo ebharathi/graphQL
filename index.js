@@ -54,6 +54,7 @@ var resolver = {
   //find a user
     user:async({token})=>{
         try {
+            console.log("user token->",token)
             const decoded=jwt.verify(token,'qazwsxplmokn');
             console.log("User verification: ",decoded);
             const user=await User.findById(decoded.userId)
@@ -75,10 +76,10 @@ var resolver = {
              }
             if(user.length!=0)
             {
-              const isPasswordSame=await bcrypt.compare(password,user?.password)
+              const isPasswordSame=await bcrypt.compare(password,user[0]?.password)
               if(isPasswordSame)
               {
-                console.log("user found--->",user)
+                // console.log("user found--->",user)
                 const token=jwt.sign({userId:user[0]._id},'qazwsxplmokn',{expiresIn:'5h'})
                 user[0].token=token;
                 return user[0];
