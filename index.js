@@ -8,7 +8,7 @@ const { buildSchema } = require("graphql")
 //mongoDB
 const {connect}=require('./connection')
 //schema
-const {User}=require('./schema')
+const {User,File}=require('./schema')
 
 const app=express();
 app.use(express.json())
@@ -25,12 +25,22 @@ var schema = buildSchema(`
      password:String
      token:String
   }
+  type File{
+    _id:ID
+    title:String
+    author:String
+    content:String
+  }
   type Query {
     user(token:String):User
     login(email:String,password:String):User
+    userFiles(token:String):[File]
+    file(id:ID):File
   }
   type Mutation{
     createUser(name:String,email:String,password:String):User
+    createFile(title:String,author:String):File
+    updateFile(id:ID,content:String):File
   }
 `)
 var resolver = {
@@ -90,8 +100,51 @@ var resolver = {
         } catch (error) {
              throw new Error(error.message)
         }
-    } 
-
+    },
+    //create a file
+    createFile:async({title,author})=>{
+        try {
+          console.log("creating file")
+          const newFile=new File();
+          const decodedToken=jwt.verify(author,'qazwsxplmokn');
+          newFile.title=title;
+          newFile.author=decodedToken.userId;
+          newFile.save();
+          console.log("[+]new file created")
+          return newFile;
+        } catch (error) {
+            throw new Error("Failed to create new file")
+        }
+    },
+    updateFile:async({id,content})=>{
+        try {
+           const file=await File.findById(id);
+           file.content=content;
+           file.save();
+           console.log("[+]File content updated")
+           return file;
+        } catch (error) {
+            throw new Error("Failed to update the file[-]")
+        }
+    },
+    userFiles:async({token})=>{
+       try {
+        const decodedToken=jwt.verify(token,'qazwsxplmokn');
+        const files=await File.find({author:decodedToken?.userId});
+        console.log("Files retrieved-->",files.length);
+        return files;
+       } catch (error) {
+          throw new Error("Failed to fetch user files")
+       }
+    },
+    file:async({id})=>{
+        try {
+            const file=await File.findById(id);
+            return file;
+        } catch (error) {
+            throw new Error("Failed to fetch file details[+]")
+        }
+    }
 
 }
 //connecting graphQL
