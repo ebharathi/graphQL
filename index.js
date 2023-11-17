@@ -28,7 +28,7 @@ var schema = buildSchema(`
   type File{
     _id:ID
     title:String
-    author:String
+    author:ID
     content:String
   }
   type Query {
@@ -140,6 +140,7 @@ var resolver = {
     file:async({id})=>{
         try {
             const file=await File.findById(id);
+            console.log("[+]Fetched File")
             return file;
         } catch (error) {
             throw new Error("Failed to fetch file details[+]")
