@@ -7,7 +7,8 @@ const connect=async()=>{
       if(con)
        console.log("Connection established.")
     } catch (error) {
-         console.log("FAILED TO CONNECTED MONGODB")
+      console.log("FAILED TO CONNECTED MONGODB")
+      console.log(error)
     }
 }
 module.exports={connect}
